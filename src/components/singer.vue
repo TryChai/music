@@ -1,6 +1,7 @@
 <template>
   <div class="singer">
     <list-view :data="singers" @select="selectSinger"></list-view>
+    <loading v-show="!singers.length>0"></loading>
     <router-view></router-view>
   </div>
 </template>
@@ -12,6 +13,7 @@
   const Hot_Singer_Size = 10
   import ListView from 'base/listview'
   import {mapMutations} from 'vuex'
+  import Loading from 'base/loading'
 export default {
   name: 'singer',
   data () {
@@ -84,7 +86,8 @@ export default {
     }),
   },
   components:{
-    ListView
+    ListView,
+    Loading
   }
 }
 </script>

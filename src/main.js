@@ -7,6 +7,7 @@ import store from './store'
 import 'babel-polyfill'
 import fastclick from 'fastclick'
 import 'common/stylus/base.styl'
+import 'common/stylus/index.styl'
 import VueLazyLoad from 'vue-lazyload'
 
 Vue.config.productionTip = false

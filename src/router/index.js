@@ -25,7 +25,12 @@ const Search =(resolve)=>{
 	})
 }
 const SearchDetail =(resolve)=>{
-	import('components/singer-detail').then((module)=>{
+  import('components/singer-detail').then((module)=>{
+    resolve(module)
+  })
+}
+const Player =(resolve)=>{
+	import('components/player').then((module)=>{
 		resolve(module)
 	})
 }

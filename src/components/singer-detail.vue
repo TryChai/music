@@ -1,6 +1,6 @@
 <template>
 	<transition name="slide">
-		<div class="singer-detail"></div>
+		<music-list :song="song" :title='title' :bgImage="bgImage"></music-list>
 	</transition>
 </template>
 
@@ -8,11 +8,27 @@
   import {mapGetters} from 'vuex'
   import {getSingerDetail}	from 'api/singer'
   import {ERR_OK} from 'api/config'
+  import {createSong} from 'common/js/song'
+  import musicList from 'components/music-list'
   export default {
+  	data(){
+  		return {
+  			song:[]
+  		}
+  	},
 	computed:{
+		title(){
+			return this.singer.name
+		},
+		bgImage(){
+			return this.singer.avatar
+		},
 		...mapGetters([
 			'singer'
 		])
+	},
+	components:{
+		musicList
 	},
 	created(){
 		this._getDetail()
@@ -20,33 +36,42 @@
 	},
 	methods:{
 		_getDetail(){
+			let that = this;
 			if(!this.singer.id){
 				this.$router.push('/singer');
 				return 
 			}
 			getSingerDetail(this.singer.id).then(res=>{
 				if(res.code == ERR_OK){
-					console.log(res.data.list)
+					that.song = that._normalizeSonge(res.data.list)
+					console.log(that.song)
 				}
 			})
-		}
+		},
+		_normalizeSonge(song){
+			let ret = []
+			if(!song){
+				return 
+			}
+			// console.log(songe)
+			song.forEach((item)=>{
+				// console.log(item.musicData)
+				if(item.musicData.songid && item.musicData.albummid){
+					createSong(item.musicData).then((res)=>{
+						ret.push(res)
+						// console.log(res)
+					})
+				}
+				
+			})
+			return ret
+		},
 	}
   }
 </script>
 
 <style>
-	.singer-detail{
-		position: fixed;
-		top: 0%;
-		left: 0%;
-		right: 0%;
-		width: 100%;
-		height: 100%;
-		max-width: 640px;
-		z-index: 100;
-		background: #222;
-		margin: auto;
-	}
+	
 	.slide-enter-active,.slide-leave-active{
 		transition:all .3s ;
 	}

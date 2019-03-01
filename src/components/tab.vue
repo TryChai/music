@@ -60,7 +60,7 @@ export default {
       width: 100%;
       top: 2rem;
       left: 0%;
-      z-index: 99;
+      z-index: 10;
       max-width: 640px;
       right: 0%;
       margin: auto;
