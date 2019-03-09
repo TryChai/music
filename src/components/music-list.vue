@@ -6,7 +6,7 @@
 		</div>
 		<div class='bgImage' :style="bgStyle" ref='bgImage'></div>
 		<loading v-show="!song.length>0"></loading>
-		<div class="playBtn" v-show="song.length>0">
+		<div class="playBtn" v-show="song.length>0" @click="randomPlayAction">
 			<div class="icon">
 				<img src="../common/images/video.png" alt="">
 			</div>
@@ -62,12 +62,17 @@
 		},
 		methods:{
 			selectSong(song,index){
+				// console.log(this.song)
 				this.selectPlay({
 				  list:this.song,
 				  index,
 				})
 			},
-			
+			randomPlayAction(){
+				this.randomPlay({
+					list:this.song
+				})
+			},
 			back(){
 				this.$router.push({
 					path:'/singer'
@@ -77,7 +82,8 @@
 				this.scrollY = pos.y
 			},
 			...mapActions([
-				'selectPlay'
+				'selectPlay',
+				'randomPlay'
 			])
 		},
 		mounted(){

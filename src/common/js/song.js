@@ -1,4 +1,6 @@
 import jsonp from './jsonp'
+import {getLyric} from 'api/song'
+import {Base64} from 'js-base64'
 export default class Song{
 	constructor({id,mid,singer,name,album,duration,image,url}){
 		this.id = id
@@ -9,6 +11,22 @@ export default class Song{
 		this.duration = duration
 		this.image = image
 		this.url = url
+	}
+    getlyric(){
+    	if(this.lyric){
+    		return Promise.resolve(this.lyric)
+    	}
+    	return new Promise((resolve,reject)=>{
+			getLyric(this.mid).then(res=>{
+				if(res.retcode === 0){
+					this.lyric = Base64.decode(res.lyric)
+					resolve(this.lyric)
+				}else{
+					reject('no lyric')
+				}
+			})
+
+    	})
 	}
 }
 //vkey的获取
@@ -33,7 +51,7 @@ export function getSongVkey(songmid) {
 }
  export function createSong(musicData){
  	return getSongVkey(musicData.songmid).then(res=>{
- 		if(res.code === 0){
+ 		if(res.code === 0 && res.data.items[0].vkey !== ''){
 		 	return new Song({
 		 		id:musicData.songid,
 		 		mid:musicData.songmid,

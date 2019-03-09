@@ -24,7 +24,7 @@ const Search =(resolve)=>{
 		resolve(module)
 	})
 }
-const SearchDetail =(resolve)=>{
+const SingerDetail =(resolve)=>{
   import('components/singer-detail').then((module)=>{
     resolve(module)
   })
@@ -55,7 +55,7 @@ export default new Router({
       children:[
       	{
       		path:':id',
-      		component:SearchDetail
+      		component:SingerDetail
       	}
       ]
     },

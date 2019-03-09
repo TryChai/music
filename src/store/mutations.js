@@ -21,5 +21,11 @@ const mutations = {
  	[types.SET_CURRENTSONG](state,index){
  		state.currentSong = state.playList[index]
  	},
+ 	[types.SET_PLAY_STATE](state,sw){
+ 		state.playState = sw
+ 	},
+ 	[types.SET_PLAY_MODE](state,n){
+ 		state.mode = n
+ 	},
  }
  export default mutations

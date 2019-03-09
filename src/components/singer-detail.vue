@@ -53,13 +53,12 @@
 			if(!song){
 				return 
 			}
-			// console.log(songe)
 			song.forEach((item)=>{
-				// console.log(item.musicData)
 				if(item.musicData.songid && item.musicData.albummid){
 					createSong(item.musicData).then((res)=>{
-						ret.push(res)
-						// console.log(res)
+						if(res){
+							ret.push(res)
+						}
 					})
 				}
 				

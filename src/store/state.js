@@ -1,3 +1,8 @@
+const playMode ={
+	sequence:0,
+	loop:1,
+	random:2
+}
 const state ={
 	singer:{},
 	sequenceList:{},
@@ -6,7 +11,7 @@ const state ={
 	playState:false,
 	fullPlay:false,
 	miniPlay:false,
-	currentSong:{}
+	currentSong:{},
+	mode:playMode.sequence,
 }
-
 export default state

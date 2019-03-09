@@ -1,67 +1,149 @@
 <template>
 	<div class="player"  >
-		<div v-show="fullPlay" class='fullPlay'>
-			<div class="background">
-				<img :src="currentSong.image" alt="">
+		<transition name="fullPlay" 
+					@enter="enter"
+					@after-enter="afterEnter"
+					@leave="leave"
+					@after-leave="afterLeave"
+		>
+			<div v-show="fullPlay" class='fullPlay'>
+				<div class="background">
+					<img :src="currentSong.image" alt="">
+				</div>
+				<div class="fullplay-top">
+					<div class="icon-back" @click="close"></div>
+					<div class="text">
+						<h1 class="name" v-html="currentSong.name"></h1>
+						<h2 class="desc" v-html="currentSong.singer"></h2>
+					</div>
+				</div>
+				<div class="middle">
+					<div class="middle-l"> 
+						<div class="die" :class="cdRotate" ref="cdwrapper">
+							<img :src="currentSong.image" alt="">
+						</div>
+						
+					</div>
+					<scroll :data="currentLyric&&currentLyric.lines">
+						<div class="middle-r">
+							<div v-if="currentLyric">
+								<p v-for="(line,index) in currentLyric.lines" :class="{'cur': currentLineNum === index}">{{line.txt}}{{currentLineNum}}</p>
+							</div>
+						</div>
+					</scroll>
+				</div>
+				<div class="bottom">
+					<div class='process'>
+						<div>{{formate(currentTime)}}</div>
+						<div class="probox" @click="getPro">
+							<div class="pro" ref="pro" @touchstart.prevent='proOntouchStart' @touchmove.prevent="proOntouchMove" @touchend.prevent="proOntouchEnd"></div>
+							<div class="prowidth" ref="prowidth"></div>
+						</div>
+						<div>{{formate(currentSong.duration)}}</div>
+					</div>
+					<div class="iconbox">
+						<div :class="iconMode" @click="changeMode"></div>
+						<div @click='prev' class="icon-prev" :class="Disable"></div>
+						<div :class="[playIcon,Disable]" @click="toggle" ></div>
+						<div @click="next" class="icon-next" :class="Disable"></div>
+						<div class="icon icon-not-favorite"></div>
+					</div>
+				</div>
 			</div>
-			<div class="fullplay-top">
-				<div class="icon-back" @click="close"></div>
-				<div class="text">
+		</transition>
+		<transition name="mini">
+			<div class="miniPlay" v-show="!fullPlay && miniPlay" @click="show">
+				<div ref="cdmini" :class="cdRotate"><img :src="currentSong.image" alt=""></div>
+				<div>
 					<h1 class="name" v-html="currentSong.name"></h1>
 					<h2 class="desc" v-html="currentSong.singer"></h2>
 				</div>
+				<progress-circle @toggle="toggle" :radius="radius" :percent="(currentTime/currentSong.duration)">
+					<div :class="playIcon" class="bar"></div>
+				</progress-circle>
+				<div class='icon-playlist'></div>
 			</div>
-			<div class="middle">
-				<div class="die">
-					<img :src="currentSong.image" alt="">
-				</div>
-			</div>
-			<div class="bottom">
-				<div class='process'>
-					<div>0:00</div>
-					<div class="probox">
-						<div class="pro"></div>
-						<div class="prowidth"></div>
-					</div>
-					<div>04:30</div>
-				</div>
-				<div class="iconbox">
-					<div class="icon-sequence"></div>
-					<div class="icon-prev"></div>
-					<div class="icon-play"></div>
-					<div class="icon-next"></div>
-					<div class="icon icon-not-favorite"></div>
-				</div>
-			</div>
-			
-		</div>
-		<div class="miniPlay" v-show="!fullPlay && miniPlay" @click="show">
-			<div><img :src="currentSong.image" alt=""></div>
-			<div>
-				<h1 class="name" v-html="currentSong.name"></h1>
-				<h2 class="desc" v-html="currentSong.singer"></h2>
-			</div>
-			<div class='icon-play'></div>
-			<div class='icon-playlist'></div>
-		</div>
+		</transition>
+		<audio ref="audio" :src="currentSong.url" @canplay="ready" @error="error" @timeupdate="updateTime($event)" @ended="end"></audio>
 	</div>
 </template>
 <script>
 	import {mapGetters,mapMutations} from 'vuex'
+	import animations from 'create-keyframe-animation'
+	import progressCircle from 'base/progress-circle'
+	import randomList from 'common/js/until'
+	import Lyric from 'lyric-parser'
+	import Scroll from 'base/scroll'
 	export default {
 		data(){
 			return {
+				songReady:false,
+				currentTime:0,
+				radius:64,
+				currentLyric:null,
+				currentLineNum:0,
 			}
 		},
 		created(){
-
+			this.touch = {}
+		},
+		mounted(){
+			this.$nextTick(()=>{
+				setTimeout(()=>{
+			this.radius =((64/23.4375)*(document.documentElement.style.fontSize.substr(0,document.documentElement.style.fontSize.indexOf('px'))))
+				},100)
+			})
 		},
 		computed:{
+			cdRotate(){
+				return this.playState?'play':'play pause'
+			},
+			playIcon(){
+				return this.playState?'icon-pause':'icon-play' 
+			},
+			Disable(){
+				return this.songReady ? '':'disable'
+			},
+			iconMode(){
+				return this.mode == 0 ?'icon-sequence':this.mode==1?'icon-loop':'icon-random'
+			},
 			...mapGetters([
 				'fullPlay',
 				'currentSong',
-				'miniPlay'
+				'miniPlay',
+				'playState',
+				'playList',
+				'currentIndex',
+				'mode',
+				'sequenceList'
 			]),
+		},
+		watch:{
+			currentSong(newSong,oldSong){
+				if(newSong.id === oldSong.id){
+					return 
+				}
+				this.$nextTick(()=>{
+					this.$refs.audio.play();
+					this.getlyric()
+				})
+			},
+			playState(newState){
+				const audio = this.$refs.audio
+				this.$nextTick(()=>{
+					newState?audio.play():audio.pause();
+				})
+			},
+			currentTime(pos){
+				const precent = ((pos/this.currentSong.duration *100 |0)/100)
+				if(precent >=0 && !this.touch.initstate){
+					let left = precent*8.9
+					let width = precent*9
+					this.$refs.pro.style['transform'] = `translate3d(${left}rem,0,0)`
+					this.$refs.pro.style['-webkit-transform'] = `translate3d(${left}rem,0,0)`
+					this.$refs.prowidth.style['width'] = `${width}rem`
+				}
+			}
 		},
 		methods:{
 			close(){
@@ -71,15 +153,219 @@
 			show(){
 				this.setFullPlay(true)
 			},
+			getlyric(){
+				this.currentSong.getlyric().then((lyric)=>{
+					this.currentLyric = new Lyric(lyric,this.lyricHandle)
+					if(this.playState){
+						this.currentLyric.play()
+					}
+				})
+			},
+			lyricHandle(lineNum,txt){
+				this.currentLineNum = lineNum.lineNum
+				if(lineNum>5){
+
+				}
+			},
+			toggle(){
+				if(!this.songReady){
+					return 
+				}
+				this.setPlayState(!this.playState);
+			},
+			prev(){
+				if(!this.songReady){
+					return 
+				}
+				let index = this.currentIndex -1
+				if(index == -1){
+					index = this.playList.length -1
+				}
+				this.setCurrentIndex(index)
+				if(!this.playState){
+					this.setPlayState(true)
+				}
+				this.songReady = false
+			},
+			changeMode(){
+				const mode = (this.mode + 1)%3
+				this.setMode(mode)
+				let list = null
+				const sequencelist = this.sequenceList
+				if(this.mode === 2){
+					list = randomList(this.sequenceList)
+				}else{
+					list = sequencelist
+				}
+				this.resetCurrentIndex(list)
+				this.setPlaylist(list)
+			},
+			resetCurrentIndex(list){
+				let index = list.findIndex((item)=>{
+					return item.id === this.currentSong.id
+				})
+				this.setCurrentIndex(index)
+			},
+			next(){
+				if(!this.songReady){
+					return 
+				}
+				let index = this.currentIndex +1
+				if(index == this.playList.length){
+					index = 0
+				}
+				this.setCurrentIndex(index)
+				if(!this.playState){
+					this.setPlayState(true)
+				}
+				this.songReady = false
+			},
+			ready(){
+				this.songReady = true
+			},
+			error(){
+				this.songReady = true
+				this.next();
+			},
+			updateTime(e){
+				this.currentTime = e.target.currentTime
+
+				if(e.target.currentTime>=this.currentSong.duration){
+					if(this.mode == 1){
+						this.$refs.audio.currentTime = 0
+					}else{
+						this.next();
+					}
+				}
+			},
+			end(){
+				if(this.mode == 1){
+					this.$refs.audio.currentTime = 0
+				}else{
+					this.next();
+				}
+			},
+			proOntouchStart(e){
+				this.touch.initstate = true
+				this.touch.startX = e.touches[0].pageX
+				this.touch.startLeft = parseFloat(this.$refs.prowidth.style.width.substr(0,this.$refs.prowidth.style.width.indexOf('rem')))
+			},
+			proOntouchMove(e){
+				if(!this.touch.initstate){
+					return
+				}
+				let fontSize = (document.documentElement.style.fontSize.substr(0,document.documentElement.style.fontSize.indexOf('px'))) 
+				let delatX = parseFloat((e.touches[0].pageX - this.touch.startX)/fontSize).toFixed(2) 
+				let left = Math.min(9,Math.max(0,parseFloat(parseFloat(this.touch.startLeft) +parseFloat(delatX))));
+				this.$refs.pro.style['transform'] = `translate3d(${left}rem,0,0)`
+				this.$refs.pro.style['-webkit-transform'] = `translate3d(${left}rem,0,0)`
+				this.$refs.prowidth.style['width'] = `${left}rem`
+				this.touch.left = left
+			},
+			proOntouchEnd(){
+				this.touch.initstate = false
+				this.$refs.audio.currentTime = (this.touch.left/9 * this.currentSong.duration)
+				if(!this.playState){
+					this.toggle();
+				}
+			},
+			getPro(e){
+				let fontSize = (document.documentElement.style.fontSize.substr(0,document.documentElement.style.fontSize.indexOf('px')))
+				let left = e.offsetX/fontSize
+				this.$refs.pro.style['transform'] = `translate3d(${left}rem,0,0)`
+				this.$refs.pro.style['-webkit-transform'] = `translate3d(${left}rem,0,0)`
+				this.$refs.prowidth.style['width'] = `${left}rem`
+				this.$refs.audio.currentTime = (left/9 * this.currentSong.duration)
+				if(!this.playState){
+					this.toggle();
+				}
+			},
+			formate(interval){
+				let inter = interval |0
+				const min = (inter /60 )|0
+				const sec = this._pad(inter % 60)
+				return `${min}:${sec}`
+			},
+			_pad(num ,n=2){
+				let len = num.toString().length
+				while(len < n){
+					num = '0'+num
+					len++
+				}
+				return num
+			},
+			enter(el,done){
+				const {x,y,scale} = this.getPos();
+				let animation = {
+					0:{
+						transform:`translate3d(${x}px,${y}px,0) scale(${scale})`,
+						opacity:0.3,
+					},
+					60:{
+						transform:`translate3d(0,0,0) scale(1.1)`,
+						opacity:1,
+					},
+					100:{
+						transform:`translate3d(0,0,0) scale(1)`,
+						opacity:1,
+					}
+				}
+				animations.registerAnimation({
+					name:'move',
+					animation,
+					preset:{
+						duration:400,
+						easing:'cubic-bezier(0.8,0.18,0.8,1.32)'
+					}
+				})
+				animations.runAnimation(this.$refs.cdwrapper,'move',done)
+			},
+			afterEnter(){
+				animations.unregisterAnimation('move')
+				this.$refs.cdwrapper.style['animation'] = ''
+			},
+			leave(el,done){
+				this.$refs.cdwrapper.style['transition'] = 'all .4s'
+				let {x,y,scale} = this.getPos();
+				this.$refs.cdwrapper.style['transform'] = `translate3d(${x}px,${y}px,0) scale(${scale})`
+				this.$refs.cdwrapper.style['-webkit-transform'] = `translate3d(${x}px,${y}px,0) scale(${scale})`
+				this.$refs.cdwrapper.addEventListener('transitionend',done)
+			},
+			afterLeave(){
+				this.$refs.cdwrapper.style['animation'] = ''
+				this.$refs.cdwrapper.style['transform'] = ''
+				this.$refs.cdwrapper.style['-webkit-transform'] = ''
+			},
+			getPos(){
+				const cdwidth = this.$refs.cdwrapper.clientWidth
+				const cdmini = this.$refs.cdmini.clientWidth
+				const cdpaddingTop = this.$refs.cdwrapper.offsetTop
+				const cdpaddingLeft = this.$refs.cdwrapper.offsetLeft
+				const cdminipaddingLeft = this.$refs.cdmini.offsetLeft
+				const scale = cdmini/cdwidth
+				const x = (cdpaddingLeft-cdwidth/2)-(cdminipaddingLeft-cdmini/2)
+				const y = window.innerHeight-cdpaddingTop-(cdwidth/2)-30
+				return {
+					x,y,scale
+				}
+			},
 			...mapMutations({
 				setFullPlay:'SET_FULL_PLAY',
 				setMiniPlay:'SET_MINI_PLAY',
+				setPlayState:'SET_PLAY_STATE',
+				setCurrentIndex:'SET_CURRENT_INDEX',
+				setMode:'SET_PLAY_MODE',
+				setPlaylist:'SET_PLAYLIST'
 			}),
 			
 		},
+		components:{
+			progressCircle,
+			Scroll
+		}
 	}
 </script>
-<style >
+<style scoped lang="stylus" rel="stylesheet/stylus">
 	.fullPlay{
 		position: fixed;
 		top: 0%;
@@ -93,9 +379,10 @@
 		background: #222;
 	}
 	.middle {
-	    height: 19rem;
-	    margin-top: -2.8rem;
+	    height: 20rem;
+	    /* margin-top: -2.8rem; */
 	    margin-bottom: 1rem;
+	    overflow: hidden;
 	}
 	.probox {
 		width: 12rem;
@@ -116,6 +403,7 @@
 	    border: 3px solid #fff;
 	    border-radius: 50%;
 	    background: #ffcd32;
+	    z-index: 5;
 	}
 	.probox .prowidth {
 	    position: relative;
@@ -124,6 +412,7 @@
 	    width: 0rem;
 	    background: #ffcd32;
 	    top: -.6rem;
+	    z-index: 3;
 	}
 	.process {
 	    display: flex;
@@ -196,22 +485,7 @@
 		padding:0;
 	}
 	li{list-style:none;}
-	@media only screen and (min-width: 600px){
-		.middle{
-			height: 15rem;
-		}
-		.fullplay-top .text {
-		    color: #fff;
-		    font-size: 0.56rem;
-		    line-height: .9rem;
-		    width: 13rem;
-		    margin-top: 0.5rem;
-		    margin-left: -1rem;
-		}
-		.fullplay-top .text .name {
-		    font-size: .7rem;
-		}
-	}
+	
 	.miniPlay {
 	    position: fixed;
 	    bottom: 0%;
@@ -223,6 +497,7 @@
 	    width: 100%;
 	    right: 0%;
 	    margin: auto;
+	    max-width: 640px;
 	    padding: .5rem 0;
 	    color: rgba(255,205,49,0.5);
 	}
@@ -251,13 +526,90 @@
 	    font-size: .4rem;
 	    margin-top: .2rem;
 	}
-	.miniPlay div:nth-child(3){
+	.miniPlay div:nth-child(3) {
 	    font-size: 1.4rem;
-	    margin-top: .4rem;
-	    margin-right: .8rem;
+	    margin-top: 0.4rem;
+	    margin-right: 1.8rem;
+	    margin-left: -.8rem;
 	}
 	.miniPlay div:nth-child(4){
 	    font-size: 1.1rem;
 	    margin-top: 0.5rem;
 	}
+	.miniPlay div.bar{
+		font-size: 1.4rem;
+		/*margin-left: -0.1rem;*/
+	}
+	/*动画*/
+	.fullPlay-enter-active,.fullPlay-leave-active{
+		transition:all .4s;
+	}
+	.fullPlay-enter-active .bottom,.fullPlay-leave-active .bottom,
+	.fullPlay-enter-active .fullplay-top,.fullPlay-leave-active .fullplay-top{
+		transition:all .4s cubic-bezier(0.86,0.18,0.82,1.32);
+	}
+	.fullPlay-enter,.fullPlay-leave-to{
+		opacity: 0;
+		z-index: -1;
+	}
+	.fullPlay-enter .fullplay-top,.fullPlay-leave-to .fullplay-top{
+	    transform:translate3d(0,-100px,0)
+	}
+	.fullPlay-enter .bottom,.fullPlay-leave-to .bottom{
+	   	transform:translate3d(0,100px,0)
+	}   
+	 .mini-enter-active,.mini-leave-active{
+	 	transition:all .4s;
+	 }
+	 .mini-enter,.mini-leave{
+	 	opacity: 0;
+	 }
+	 .play{
+	 	animation:rotate 10s linear infinite;
+	 	-webkit-animation:rotate 10s linear infinite;
+	 }  
+	 .pause{
+	 	animation-play-state:paused;
+	 } 
+	 @keyframes rotate{
+	 	0%{
+	 		transform:rotate(0deg);
+	 	}
+	 	100%{
+	 		transform:rotate(360deg);
+	 	}
+	 }
+	 .middle-l {
+	    margin-top: -2.8rem;
+	    display: none;
+	}
+	 .middle-r {
+	    /*margin-top: 1rem;*/
+	    /*margin-top: 3rem;*/
+	}
+	 .middle-r p {
+	     font-size: 0.6rem;
+	     color: #c3c3c3;
+	     line-height: 1.3rem;
+	 }
+	 .middle-r p.cur{
+	 	color: #fff;
+	 }
+
+	 @media only screen and (min-width: 600px){
+	 	.middle{
+	 		height: 15rem;
+	 	}
+	 	.fullplay-top .text {
+	 	    color: #fff;
+	 	    font-size: 0.56rem;
+	 	    line-height: .9rem;
+	 	    width: 13rem;
+	 	    margin-top: 0.5rem;
+	 	    margin-left: -1rem;
+	 	}
+	 	.fullplay-top .text .name {
+	 	    font-size: .7rem;
+	 	}
+	 }
 </style>
