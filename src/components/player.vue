@@ -24,10 +24,10 @@
 						</div>
 						
 					</div>
-					<scroll :data="currentLyric&&currentLyric.lines">
+					<scroll :data="currentLyric&&currentLyric.lines" ref="lyricscroll">
 						<div class="middle-r">
 							<div v-if="currentLyric">
-								<p v-for="(line,index) in currentLyric.lines" :class="{'cur': currentLineNum === index}">{{line.txt}}{{currentLineNum}}</p>
+								<p ref="lyricLine" v-for="(line,index) in currentLyric.lines" :class="{'cur': currentLineNum === index}">{{line.txt}}</p>
 							</div>
 						</div>
 					</scroll>
@@ -82,6 +82,7 @@
 				radius:64,
 				currentLyric:null,
 				currentLineNum:0,
+				lyric:null,
 			}
 		},
 		created(){
@@ -155,16 +156,20 @@
 			},
 			getlyric(){
 				this.currentSong.getlyric().then((lyric)=>{
+					this.lyric = lyric
 					this.currentLyric = new Lyric(lyric,this.lyricHandle)
 					if(this.playState){
 						this.currentLyric.play()
 					}
 				})
 			},
-			lyricHandle(lineNum,txt){
-				this.currentLineNum = lineNum.lineNum
+			lyricHandle({lineNum,txt}){
+				this.currentLineNum = lineNum
 				if(lineNum>5){
-
+					let linEl = this.$refs.lyricLine[lineNum - 5]
+					this.$refs.lyricscroll.scrollToElement(linEl,1000)
+				}else{
+					this.$refs.lyricscroll.scrollTo(0,0,1000)
 				}
 			},
 			toggle(){
@@ -172,6 +177,7 @@
 					return 
 				}
 				this.setPlayState(!this.playState);
+				this.currentLyric.togglePlay()
 			},
 			prev(){
 				if(!this.songReady){
@@ -233,6 +239,7 @@
 				if(e.target.currentTime>=this.currentSong.duration){
 					if(this.mode == 1){
 						this.$refs.audio.currentTime = 0
+						this.currentLyric.seek(0)
 					}else{
 						this.next();
 					}
@@ -241,6 +248,7 @@
 			end(){
 				if(this.mode == 1){
 					this.$refs.audio.currentTime = 0
+					this.currentLyric.seek(0)
 				}else{
 					this.next();
 				}
@@ -265,6 +273,7 @@
 			proOntouchEnd(){
 				this.touch.initstate = false
 				this.$refs.audio.currentTime = (this.touch.left/9 * this.currentSong.duration)
+				this.currentLyric.seek(this.$refs.audio.currentTime*1000)
 				if(!this.playState){
 					this.toggle();
 				}
@@ -276,6 +285,7 @@
 				this.$refs.pro.style['-webkit-transform'] = `translate3d(${left}rem,0,0)`
 				this.$refs.prowidth.style['width'] = `${left}rem`
 				this.$refs.audio.currentTime = (left/9 * this.currentSong.duration)
+				this.currentLyric.seek(this.$refs.audio.currentTime*1000)
 				if(!this.playState){
 					this.toggle();
 				}
