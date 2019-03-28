@@ -87,6 +87,9 @@
         scroll(pos){
          this.scrollY = pos.y
         },
+        refresh(){
+          this.$refs.listview.refresh();
+        },
         _LiHight(){
           let height = 0;
           this.LiHight.push(height)

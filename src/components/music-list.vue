@@ -14,7 +14,7 @@
 		</div>
 		<div class="bg-layer" ref="Bglayer"></div>
 		<div class="songList">
-			<scroll @scroll="scroll" :data="song" :probeType="probeType" :listen-scroll="listenScroll" >
+			<scroll @scroll="scroll" :data="song" :probeType="probeType" :listen-scroll="listenScroll" ref="songlist">
 				<div class="song-list-wrapper">
 					<song-list :songs="song" @selectSong="selectSong"></song-list>
 				</div>
@@ -28,8 +28,10 @@
 	import Scroll from 'base/scroll'
 	import SongList from 'components/song-list'
 	import Loading from 'base/loading'
-	import {mapActions} from 'vuex'
+	import {mapActions} from 'vuex' 
+	import {playlistMixin} from 'common/js/mixin'
 	export default{
+		mixins:[playlistMixin],
 		data(){
 			return {
 				scrollY:0,
@@ -61,6 +63,12 @@
 			this.listenScroll = true
 		},
 		methods:{
+			handlePlaylist(playlist){
+				const bottom = playlist.length >0?'3.5rem':''
+				// console.log()
+				this.$refs.songlist.$el.firstChild.children[0].style.paddingBottom = bottom
+				this.$refs.songlist.refresh()
+			},
 			selectSong(song,index){
 				// console.log(this.song)
 				this.selectPlay({
@@ -176,6 +184,7 @@
 	    top: 11rem;
 	    left: 0%;
 	    z-index: 4;
+	    width: 100%;
 	}
 	.bg-layer {
 	    height: 100%;

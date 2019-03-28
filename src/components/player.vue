@@ -17,20 +17,26 @@
 						<h2 class="desc" v-html="currentSong.singer"></h2>
 					</div>
 				</div>
-				<div class="middle">
-					<div class="middle-l"> 
+				<div class="middle" @touchstart.prevent='middleTouchStart' @touchmove.prevent='middleTouchMove' @touchend.prevent='middleTouchEnd'>
+					<div class="middle-l" ref="msleft"> 
 						<div class="die" :class="cdRotate" ref="cdwrapper">
 							<img :src="currentSong.image" alt="">
 						</div>
-						
+						<div class='lysrictxt'>{{lysrictxt}}</div>
 					</div>
-					<scroll :data="currentLyric&&currentLyric.lines" ref="lyricscroll">
-						<div class="middle-r">
-							<div v-if="currentLyric">
-								<p ref="lyricLine" v-for="(line,index) in currentLyric.lines" :class="{'cur': currentLineNum === index}">{{line.txt}}</p>
+					<div class="middle-scroll" ref='mscroll'> 
+						<scroll :data="currentLyric&&currentLyric.lines" ref="lyricscroll">
+							<div class="middle-r">
+								<div v-if="currentLyric">
+									<p ref="lyricLine" v-for="(line,index) in currentLyric.lines" :class="{'cur': currentLineNum === index}">{{line.txt}}</p>
+								</div>
 							</div>
-						</div>
-					</scroll>
+						</scroll>
+					</div>
+					<div class="dot">
+						<span :class="{active:currentstateDot === 'cd'}"></span>
+						<span :class="{active:currentstateDot === 'lyric'}"></span>
+					</div>
 				</div>
 				<div class="bottom">
 					<div class='process'>
@@ -83,10 +89,13 @@
 				currentLyric:null,
 				currentLineNum:0,
 				lyric:null,
+				currentstateDot:'cd',
+				lysrictxt:'',
 			}
 		},
 		created(){
-			this.touch = {}
+			this.touch = {},
+			this.touches={}
 		},
 		mounted(){
 			this.$nextTick(()=>{
@@ -124,10 +133,10 @@
 				if(newSong.id === oldSong.id){
 					return 
 				}
-				this.$nextTick(()=>{
+				setTimeout(()=>{
 					this.$refs.audio.play();
 					this.getlyric()
-				})
+				},1000)
 			},
 			playState(newState){
 				const audio = this.$refs.audio
@@ -161,7 +170,67 @@
 					if(this.playState){
 						this.currentLyric.play()
 					}
+				}).catch(()=>{
+					this.currentLyric = null
+					this.lysrictxt = ''
+					this.currentLineNum = 0
 				})
+			},
+			middleTouchStart(e){
+				this.touches.initaval = true
+				this.touches.touchX = e.touches[0].pageX
+				this.touches.touchY = e.touches[0].pageY
+			},
+			middleTouchMove(e){
+				if(!this.touches.initaval){
+				   return
+				}
+				let delatX = e.touches[0].pageX - this.touches.touchX
+				let delatY = e.touches[0].pageY - this.touches.touchY
+				if(Math.abs(delatY) > Math.abs(delatX)){
+					return
+				}
+				/*console.log('x'+delatX)
+				console.log('y'+delatY)*/
+				let left = this.currentstateDot === 'cd'?0: -window.innerWidth
+				// const width = delatX < 0 ? Math.min(0,left+delatX) :Math.max(-window.innerWidth,left+delatX)
+				const offsetwidth = Math.min(0,Math.max(-window.innerWidth,left+delatX))
+				this.touches.percent = Math.abs(offsetwidth/window.innerWidth)
+				this.$refs.mscroll.style['transform'] = `translate3d(${offsetwidth}px,0,0)`
+				this.$refs.mscroll.style['-webkit-transform'] = `translate3d(${offsetwidth}px,0,0)`
+				this.$refs.mscroll.style['transitionDuration'] = '0ms'
+				this.$refs.mscroll.style['transitionDuration'] = '0ms'
+				this.$refs.msleft.style['transitionDuration'] = '0ms'
+				this.$refs.msleft.style['-webkit-transitionDuration'] = '0ms'
+				this.$refs.msleft.style['opacity'] = 1-this.touches.percent
+			},
+			middleTouchEnd(){
+				let offsetwidth,opacity
+				if(this.currentstateDot === 'cd'){
+					if(this.touches.percent >0.2){
+						offsetwidth = -window.innerWidth
+						this.currentstateDot = 'lyric'
+						opacity = 0
+					}else{
+						offsetwidth = 0
+						opacity = 1
+					}
+				}else{
+					if(this.touches.percent <0.9){
+						offsetwidth = 0
+						this.currentstateDot = 'cd'
+						opacity = 1
+					}else{
+						offsetwidth = -window.innerWidth
+						opacity = 0
+					}
+				}
+				this.$refs.mscroll.style['transform'] = `translate3d(${offsetwidth}px,0,0)`
+				this.$refs.mscroll.style['-webkit-transform'] = `translate3d(${offsetwidth}px,0,0)`
+				this.$refs.mscroll.style['transitionDuration'] = '300ms'
+				this.$refs.mscroll.style['-webkit-transitionDuration'] = '300ms'
+				this.$refs.msleft.style['opacity'] = opacity
+				this.touches.initaval = false
 			},
 			lyricHandle({lineNum,txt}){
 				this.currentLineNum = lineNum
@@ -171,16 +240,23 @@
 				}else{
 					this.$refs.lyricscroll.scrollTo(0,0,1000)
 				}
+				this.lysrictxt = txt
 			},
 			toggle(){
 				if(!this.songReady){
 					return 
 				}
 				this.setPlayState(!this.playState);
-				this.currentLyric.togglePlay()
+				if(this.currentLyric){
+					this.currentLyric.togglePlay()
+				}
 			},
 			prev(){
 				if(!this.songReady){
+					return 
+				}
+				if(this.playList.length==1){
+					this.loop()
 					return 
 				}
 				let index = this.currentIndex -1
@@ -216,6 +292,10 @@
 				if(!this.songReady){
 					return 
 				}
+				if(this.playList.length==1){
+					this.loop()
+					return 
+				}
 				let index = this.currentIndex +1
 				if(index == this.playList.length){
 					index = 0
@@ -235,20 +315,29 @@
 			},
 			updateTime(e){
 				this.currentTime = e.target.currentTime
-
 				if(e.target.currentTime>=this.currentSong.duration){
 					if(this.mode == 1){
 						this.$refs.audio.currentTime = 0
-						this.currentLyric.seek(0)
+						if(this.currentLyric){
+							this.currentLyric.seek(0)
+						}
 					}else{
 						this.next();
 					}
 				}
 			},
+			loop(){
+				this.$refs.audio.currentTime = 0
+				if(this.currentLyric){
+					this.currentLyric.seek(0)
+				}
+			},
 			end(){
 				if(this.mode == 1){
 					this.$refs.audio.currentTime = 0
-					this.currentLyric.seek(0)
+					if(this.currentLyric){
+						this.currentLyric.seek(0)
+					}
 				}else{
 					this.next();
 				}
@@ -273,7 +362,9 @@
 			proOntouchEnd(){
 				this.touch.initstate = false
 				this.$refs.audio.currentTime = (this.touch.left/9 * this.currentSong.duration)
-				this.currentLyric.seek(this.$refs.audio.currentTime*1000)
+				if(this.currentLyric){
+					this.currentLyric.seek(this.$refs.audio.currentTime*1000)
+				}
 				if(!this.playState){
 					this.toggle();
 				}
@@ -376,6 +467,16 @@
 	}
 </script>
 <style scoped lang="stylus" rel="stylesheet/stylus">
+	img{
+		pointer-events:none;
+	}
+	.lysrictxt {
+	    margin-top: 2.5rem;
+	    font-size: 0.56rem;
+	    color: #ddd;
+	    line-height: 1rem;
+	    padding: 0 .6rem;
+	}
 	.fullPlay{
 		position: fixed;
 		top: 0%;
@@ -389,10 +490,9 @@
 		background: #222;
 	}
 	.middle {
-	    height: 20rem;
-	    /* margin-top: -2.8rem; */
-	    margin-bottom: 1rem;
+	    height: 21rem;
 	    overflow: hidden;
+	    position: relative;
 	}
 	.probox {
 		width: 12rem;
@@ -469,7 +569,7 @@
 		font-size: 1.8rem;
     	margin-top: -.23rem;
 	}
-	.fullplay-top{display: flex;padding: 0 .5rem;}
+	.fullplay-top{display: flex;padding: 0 .5rem;margin-top: .4rem;}
 	.icon-back {
 	    font-size: 0.95rem;
 	    color: rgb(255, 205, 50);
@@ -590,12 +690,21 @@
 	 	}
 	 }
 	 .middle-l {
-	    margin-top: -2.8rem;
-	    display: none;
-	}
+	     margin-top: -2.8rem;
+	     /*display: none;*/
+	     height: 20rem;
+	 }
 	 .middle-r {
 	    /*margin-top: 1rem;*/
 	    /*margin-top: 3rem;*/
+	}
+	.middle-scroll {
+	    height: 19.5rem;
+	    overflow: hidden;
+	    position: absolute;
+	    right: -100%;
+	    top: 0%;
+	    width: 100%;
 	}
 	 .middle-r p {
 	     font-size: 0.6rem;
@@ -603,9 +712,28 @@
 	     line-height: 1.3rem;
 	 }
 	 .middle-r p.cur{
-	 	color: #fff;
+	 	color: #ffcd32;
 	 }
+	.dot{
+		position: absolute;
+		bottom: 1%;
+		left: 0%;
+		right: 0%;
+		margin:auto;
 
+	}
+	.dot span{
+		display: inline-block;
+		width: .3rem;
+		height: .3rem;
+		border-radius: 100%;
+		background: #aaa;
+	}
+	.dot span.active{
+		width: 1rem;
+		border-radius: .6rem;
+		background: #fff;
+	}
 	 @media only screen and (min-width: 600px){
 	 	.middle{
 	 		height: 15rem;
