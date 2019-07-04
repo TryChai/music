@@ -27,5 +27,23 @@ const mutations = {
  	[types.SET_PLAY_MODE](state,n){
  		state.mode = n
  	},
+ 	[types.SET_SINGER_LI](state,b){
+ 		state.singerli = b
+ 	},
+ 	[types.SET_DISC](state,disc){
+ 		state.disc = disc
+ 	},
+ 	[types.SET_TOP_LIST](state,topList){
+ 		state.topList = topList
+	 },
+	 [types.SET_SEARCH_HISTOEY](state,history){
+		 state.searchHistory = history
+	 },
+	 [types.SET_PLAY_HISTORY](state,history){
+		 state.playHistory = history
+	 },
+	 [types.SET_LIKE_LIST](state,likelist){
+		 state.likeList = likelist
+	 }
  }
  export default mutations

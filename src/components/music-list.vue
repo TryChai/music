@@ -5,18 +5,21 @@
 			<div class="title" v-html="title"></div>
 		</div>
 		<div class='bgImage' :style="bgStyle" ref='bgImage'></div>
-		<loading v-show="!song.length>0"></loading>
+		<loading v-show="!song.length>0&&!noRseultShow"></loading>
 		<div class="playBtn" v-show="song.length>0" @click="randomPlayAction">
 			<div class="icon">
 				<img src="../common/images/video.png" alt="">
 			</div>
 			<p>随机播放全部</p>
 		</div>
+		<div class="noResult" v-show="noRseultShow">
+			<noResult title="这个歌手没有歌曲哟，换个歌手试试吧~" ></noResult>
+		</div>
 		<div class="bg-layer" ref="Bglayer"></div>
 		<div class="songList">
 			<scroll @scroll="scroll" :data="song" :probeType="probeType" :listen-scroll="listenScroll" ref="songlist">
 				<div class="song-list-wrapper">
-					<song-list :songs="song" @selectSong="selectSong"></song-list>
+					<song-list :songs="song" @selectSong="selectSong" :rank='rank'></song-list>
 				</div>
 			</scroll>
 		</div>
@@ -30,6 +33,7 @@
 	import Loading from 'base/loading'
 	import {mapActions} from 'vuex' 
 	import {playlistMixin} from 'common/js/mixin'
+	import noResult from 'base/no-result'
 	export default{
 		mixins:[playlistMixin],
 		data(){
@@ -37,6 +41,7 @@
 				scrollY:0,
 				bgImageHeight:0,
 				topHeight:0,
+				noRseultShow:false
 			}
 		},
 		props:{
@@ -51,6 +56,10 @@
 			title:{
 				type:String,
 				default:''
+			},
+			rank:{
+			   type:Boolean,
+			   default:false
 			}
 		},
 		computed:{
@@ -65,14 +74,13 @@
 		methods:{
 			handlePlaylist(playlist){
 				const bottom = playlist.length >0?'3.5rem':''
-				// console.log()
 				this.$refs.songlist.$el.firstChild.children[0].style.paddingBottom = bottom
 				this.$refs.songlist.refresh()
 			},
 			selectSong(song,index){
 				// console.log(this.song)
 				this.selectPlay({
-				  list:this.song,
+				  list:this.song.slice(),
 				  index,
 				})
 			},
@@ -82,9 +90,7 @@
 				})
 			},
 			back(){
-				this.$router.push({
-					path:'/singer'
-				})
+				this.$router.go(-1)
 			},
 			scroll(pos) {
 				this.scrollY = pos.y
@@ -119,12 +125,21 @@
 				this.$refs.Bglayer.style['-webkit-transform'] = `translate3d(0,${translateY}px,0)`;
 				this.$refs.bgImage.style['transform'] = `scale(${scale})`;
 				this.$refs.bgImage.style['-webkit-transform'] = `scale(${scale})`;
+			},
+			song(newSong){
+				setTimeout(()=>{
+					if(newSong.length<=0){
+						this.noRseultShow = true
+					}
+				},1000)
+				
 			}
 		},
 		components:{
 			Scroll,
 			SongList,
-			Loading
+			Loading,
+			noResult
 		}
 	}
 </script>
@@ -136,6 +151,11 @@
 	    padding: 0 .6rem;
 	    position: fixed;
 	    z-index: 11;
+	}
+	.noResult{
+		position: relative;
+		z-index: 9;
+		margin-top: 13rem;
 	}
 	.playBtn {
 	    position: absolute;

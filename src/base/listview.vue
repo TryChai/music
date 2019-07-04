@@ -12,6 +12,7 @@
             </li>
           </ul>
       </li>
+        <div style="height:2.5rem;background:transparent" v-if="setsingerLi"></div>
     </ul>
     <div class="shortCutlsit" @touchstart="shortCutTouchStart" @touchmove.stop.prevent="shortCutTouchMove">
       <ul >
@@ -47,6 +48,10 @@
       data:{
         type:Array,
         default:null,
+      },
+      setsingerLi:{
+        type:Boolean,
+        default:false
       }
     },
     components:{
@@ -148,6 +153,7 @@
 .listview{
   height: 24.5rem;
   overflow: hidden;
+  margin-top: 2.2rem;
 }
   ul,h2,p,li,h1{
     margin:0;
@@ -174,9 +180,9 @@
   border-radius: 100%;
  }
  .list-group-items .name{
-  font-size: .6rem;
+  font-size: .56rem;
   color: #f2f2f2;
-  line-height: 2rem;
+  line-height: 1.5rem;
  }
  .shortCutlsit {
      position: absolute;
@@ -185,15 +191,15 @@
  }
  .shortCutlsit ul li {
      color: #d6d6d6;
-     font-size: 0.6rem;
-     padding: .07rem 0;
+     font-size: 0.56rem;
+     padding: .1rem 0;
  }
  .shortCutlsit ul li.active {
   color: #f8ba23;
  }
  .fiexed-title {
      position: fixed;
-     top: 3.8rem;
+     top: 3.6rem;
      left: 0%;
      padding: 1% 5%;
      color: #f4f4f4;

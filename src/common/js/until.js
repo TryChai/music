@@ -15,3 +15,16 @@ export default function randomList(arr){
 	}
 	return _arr
 }
+
+//节流
+export function TimeoutQuery(fun,delay){
+	let timer = null
+	return function(...args){
+		if(timer){
+			clearTimeout(timer)
+		}
+		timer = setTimeout(()=>{
+			fun.apply(this,args)
+		},delay)
+	}
+}

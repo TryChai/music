@@ -1,20 +1,6 @@
 <template>
-  <!-- <div class="tab">
-      <router-link tag="div" class="tag-item" to="/recommend">
-        <span class="tab-link">推荐</span>
-      </router-link>
-      <router-link tag="div" class="tag-item" to="/singer">
-        <span>歌手</span>
-      </router-link>
-      <router-link tag="div" class="tag-item" to="/rank">
-        <span>排行</span>
-      </router-link>
-      <router-link tag="div" class="tag-item" to="/search">
-        <span>搜索</span>
-      </router-link>
-  </div> -->
   <div class="tab" >
-      <router-link tag="div" class="tag-item" :to="item.path" v-for="item in routerlist" @click.native="navclick(item.path)" >
+      <router-link tag="div" class="tag-item" :to="item.path" v-for="(item,index) in routerlist" @click.native="navclick(item.path)" :key="Math.random()">
         <span :class="[currentpath == item.path ?'tab-link':'']">{{item.text}}</span>
       </router-link>
   </div>
@@ -36,7 +22,7 @@ export default {
   },
   mounted(){
     let roterl = this.$router.options.routes;
-    roterl.shift();
+    roterl = roterl.slice(1,5)
     this.routerlist = roterl;
     this.$router.afterEach((to,from)=>{
       this.currentpath = to.path;

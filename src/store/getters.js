@@ -9,3 +9,9 @@ export const currentSong = state=>{
 export const mode = state => state.mode
 export const playList = state=> state.playList
 export const playState = state=>state.playState
+export const singerli = state=>state.singerli
+export const disc = state=>state.disc
+export const topList = state => state.topList
+export const searchHistory = state=> state.searchHistory
+export const playHistory = state=>state.playHistory
+export const likeList = state=>state.likeList

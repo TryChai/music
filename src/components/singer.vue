@@ -1,7 +1,7 @@
 <template>
   <div class="singer" ref='singer'>
-    <list-view :data="singers" @select="selectSinger" ref='singerlist'></list-view>
-    <loading v-show="!singers.length>0"></loading>
+    <list-view :data="singers" @select="selectSinger" ref='singerlist' :setsingerLi='setsingerLitype'></list-view>
+    <loading v-show="!singers.length>0&&!singerli"></loading>
     <router-view></router-view>
   </div>
 </template>
@@ -12,7 +12,7 @@
   const Hot_Name="热门"
   const Hot_Singer_Size = 10
   import ListView from 'base/listview'
-  import {mapMutations} from 'vuex'
+  import {mapMutations,mapGetters} from 'vuex'
   import Loading from 'base/loading'
   import {playlistMixin} from 'common/js/mixin'
 export default {
@@ -21,18 +21,27 @@ export default {
   data () {
     return {
       singers:[],
+      setsingerLitype:false,
     }
   },
   activated(){
     this._getSingerlist();
   },
+  computed:{
+    ...mapGetters(['singerli']),
+  },
   methods:{
     handlePlaylist(playlist){
-      const bottom = playlist.length>0?'3.5rem':''
-      // this.$refs.singer.style.bottom = bottom
-      // this.$refs.singerlist.$el.style.paddingBottom = bottom
-      this.$refs.singerlist.refresh()
-      console.log(this.$refs.singerlist.$el.clientHeight/23.4375)
+      if(playlist.length>0){
+        if(this.singerli){
+          this.setsingerLitype = true
+        }
+      }
+      setTimeout(()=>{
+        this.$nextTick(()=>{
+          this.$refs.singerlist.refresh()
+        })
+      },50)
     },
     selectSinger(singer){
       this.$router.push({
@@ -89,7 +98,8 @@ export default {
      
     },
      ...mapMutations({
-        setSinger:'SET_SINGER'
+        setSinger:'SET_SINGER',
+        setsingerLi:'SET_SINGER_LI'
     }),
   },
   components:{

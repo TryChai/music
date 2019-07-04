@@ -1,5 +1,5 @@
 <template>
-  <div ref="wrapper" class="wrapper">
+  <div ref="wrapper" :class="wrapperStyle">
      <slot></slot>
   </div>
 </template>
@@ -23,6 +23,22 @@
         listenScroll:{
           type:Boolean,
           default:false
+        },
+        pullup:{
+          type:Boolean,
+          default:false
+        },
+        beforeScroll:{
+          type:Boolean,
+          default:false
+        },
+        refreshDelay:{
+          type:Number,
+          default:20
+        },
+        wrapperStyle:{
+          type:String,
+          default:'wrapper'
         }
     },
     mounted(){
@@ -48,6 +64,20 @@
             that.$emit('scroll',pos)
           })
         }
+        if(this.pullup){
+           let that = this;
+          this.scroll.on('scrollEnd',()=>{
+            //将滚动到最底的事件 派发出去
+            if(this.scroll.y <= (this.scroll.maxScrollY + 50) ){
+              that.$emit('scrollToEnd')
+            }
+          })
+        }
+        if(this.beforeScroll){
+          this.scroll.on('beforeScrollStart',()=>{
+            this.$emit('beforeScroll')
+          })
+        }
       },
       enable(){
         this.scroll&&this.scroll.enable()
@@ -68,8 +98,10 @@
     watch:{
       data(){
         setTimeout(()=>{
-            this.refresh()
-          },200)
+           this.$nextTick(()=>{
+              this.refresh()
+             })
+            },this.refreshDelay)
       }
     }
   }

@@ -30,11 +30,26 @@ const SingerDetail =(resolve)=>{
   })
 }
 const Player =(resolve)=>{
-	import('components/player').then((module)=>{
+  import('components/player').then((module)=>{
+    resolve(module)
+  })
+}
+const Disc =(resolve)=>{
+	import('components/disc').then((module)=>{
 		resolve(module)
 	})
 }
 
+const Toplist = (resolve)=>{
+  import ('components/toplist').then((module)=>{
+    resolve(module)
+  })
+}
+const User = (resolve)=>{
+  import('components/user').then((moule)=>{
+    resolve(moule)
+  })
+}
 export default new Router({
   routes: [
   	{
@@ -45,7 +60,13 @@ export default new Router({
       path: '/recommend',
       name:'recommend',
       text:'推荐',
-      component: Recommend
+      component: Recommend,
+      children:[
+        {
+          path:':id',
+          component:Disc
+        }
+      ]
     },
     {
       path: '/singer',
@@ -63,13 +84,31 @@ export default new Router({
       path: '/rank',
       name:'rank',
       text:'排行',
-      component: Rank
+      component: Rank,
+      children:[
+        {
+          path:':id',
+          component:Toplist
+        }
+      ]
     },
     {
       path: '/search',
       name:'search',
       text:'搜索',
-      component: Search
+      component: Search,
+      children:[
+      	{
+      		path:':id',
+      		component:SingerDetail
+      	}
+      ]
+    },
+    {
+      path:'/user',
+      name:'user',
+      text:'用户',
+      component:User
     }
   ]
 })

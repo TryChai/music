@@ -47,12 +47,12 @@
 						</div>
 						<div>{{formate(currentSong.duration)}}</div>
 					</div>
-					<div class="iconbox">
+					<div class="iconbox" @click.stop="setModeText">
 						<div :class="iconMode" @click="changeMode"></div>
-						<div @click='prev' class="icon-prev" :class="Disable"></div>
-						<div :class="[playIcon,Disable]" @click="toggle" ></div>
-						<div @click="next" class="icon-next" :class="Disable"></div>
-						<div class="icon icon-not-favorite"></div>
+						<div @click.stop.prevent='prev' class="icon-prev" :class="Disable"></div>
+						<div :class="[playIcon,Disable]" @click.stop.prevent="toggle" ></div>
+						<div @click.stop.prevent="next" class="icon-next" :class="Disable"></div>
+						<div class="icon" :class="getLike(currentSong)" @click.stop.prevent="toggleLike(currentSong)"></div>
 					</div>
 				</div>
 			</div>
@@ -67,20 +67,25 @@
 				<progress-circle @toggle="toggle" :radius="radius" :percent="(currentTime/currentSong.duration)">
 					<div :class="playIcon" class="bar"></div>
 				</progress-circle>
-				<div class='icon-playlist'></div>
+				<div class='icon-playlist' @click.stop.prevent ="playlistShow"></div>
 			</div>
 		</transition>
-		<audio ref="audio" :src="currentSong.url" @canplay="ready" @error="error" @timeupdate="updateTime($event)" @ended="end"></audio>
+		<toast :text="text" :delay="delay" ref="toast"></toast>
+		<playlist ref="playlist"></playlist>
+		<audio ref="audio" :src="currentSong.url" @play="ready" @error="error" @timeupdate="updateTime($event)" @ended="end"></audio>
 	</div>
 </template>
 <script>
-	import {mapGetters,mapMutations} from 'vuex'
+	import {mapGetters,mapMutations,mapActions} from 'vuex'
 	import animations from 'create-keyframe-animation'
 	import progressCircle from 'base/progress-circle'
-	import randomList from 'common/js/until'
 	import Lyric from 'lyric-parser'
 	import Scroll from 'base/scroll'
+	import playlist from 'components/playlist'
+	import {playmodeMixin,likeMixin} from 'common/js/mixin'
+	import toast from 'base/toast'
 	export default {
+		mixins:[playmodeMixin,likeMixin],
 		data(){
 			return {
 				songReady:false,
@@ -91,6 +96,8 @@
 				lyric:null,
 				currentstateDot:'cd',
 				lysrictxt:'',
+				text:'',
+				delay:800
 			}
 		},
 		created(){
@@ -114,9 +121,6 @@
 			Disable(){
 				return this.songReady ? '':'disable'
 			},
-			iconMode(){
-				return this.mode == 0 ?'icon-sequence':this.mode==1?'icon-loop':'icon-random'
-			},
 			...mapGetters([
 				'fullPlay',
 				'currentSong',
@@ -124,18 +128,27 @@
 				'playState',
 				'playList',
 				'currentIndex',
-				'mode',
-				'sequenceList'
+				'sequenceList',
 			]),
 		},
 		watch:{
 			currentSong(newSong,oldSong){
-				if(newSong.id === oldSong.id){
+				if(!newSong.id || newSong.id === oldSong.id){
 					return 
 				}
-				setTimeout(()=>{
-					this.$refs.audio.play();
-					this.getlyric()
+				clearInterval(this.timer)
+				this.timer = setTimeout(()=>{
+					this.$nextTick(()=>{
+						this.$refs.audio.play();
+						this.$refs.audio.currentTime = 0
+						this.currentLineNum = 0
+						this.currentTime = 0
+						this.getlyric();
+						if(this.currentLyric){
+							this.currentLyric.stop()
+						}
+						this.$refs.lyricscroll.refresh()
+					})
 				},1000)
 			},
 			playState(newState){
@@ -163,8 +176,14 @@
 			show(){
 				this.setFullPlay(true)
 			},
+			playlistShow(){
+				this.$refs.playlist.show()
+			},
 			getlyric(){
 				this.currentSong.getlyric().then((lyric)=>{
+					if(this.currentSong.lyric != lyric){
+						return
+					}
 					this.lyric = lyric
 					this.currentLyric = new Lyric(lyric,this.lyricHandle)
 					if(this.playState){
@@ -175,6 +194,16 @@
 					this.lysrictxt = ''
 					this.currentLineNum = 0
 				})
+			},
+			setModeText(){
+				if(this.mode == 0){
+					this.text = '顺序播放'
+				}else if(this.mode == 1){
+					this.text = '单曲循环'
+				}else {
+					this.text = '随机播放'
+				}
+				this.$refs.toast.show();
 			},
 			middleTouchStart(e){
 				this.touches.initaval = true
@@ -190,8 +219,6 @@
 				if(Math.abs(delatY) > Math.abs(delatX)){
 					return
 				}
-				/*console.log('x'+delatX)
-				console.log('y'+delatY)*/
 				let left = this.currentstateDot === 'cd'?0: -window.innerWidth
 				// const width = delatX < 0 ? Math.min(0,left+delatX) :Math.max(-window.innerWidth,left+delatX)
 				const offsetwidth = Math.min(0,Math.max(-window.innerWidth,left+delatX))
@@ -236,7 +263,7 @@
 				this.currentLineNum = lineNum
 				if(lineNum>5){
 					let linEl = this.$refs.lyricLine[lineNum - 5]
-					this.$refs.lyricscroll.scrollToElement(linEl,1000)
+					this.$refs.lyricscroll&&this.$refs.lyricscroll.scrollToElement(linEl,1000)
 				}else{
 					this.$refs.lyricscroll.scrollTo(0,0,1000)
 				}
@@ -269,25 +296,6 @@
 				}
 				this.songReady = false
 			},
-			changeMode(){
-				const mode = (this.mode + 1)%3
-				this.setMode(mode)
-				let list = null
-				const sequencelist = this.sequenceList
-				if(this.mode === 2){
-					list = randomList(this.sequenceList)
-				}else{
-					list = sequencelist
-				}
-				this.resetCurrentIndex(list)
-				this.setPlaylist(list)
-			},
-			resetCurrentIndex(list){
-				let index = list.findIndex((item)=>{
-					return item.id === this.currentSong.id
-				})
-				this.setCurrentIndex(index)
-			},
 			next(){
 				if(!this.songReady){
 					return 
@@ -308,6 +316,7 @@
 			},
 			ready(){
 				this.songReady = true
+				this.inserPlayHistory(this.currentSong)
 			},
 			error(){
 				this.songReady = true
@@ -455,14 +464,16 @@
 				setMiniPlay:'SET_MINI_PLAY',
 				setPlayState:'SET_PLAY_STATE',
 				setCurrentIndex:'SET_CURRENT_INDEX',
-				setMode:'SET_PLAY_MODE',
-				setPlaylist:'SET_PLAYLIST'
 			}),
-			
+			...mapActions([
+				'inserPlayHistory',
+			])
 		},
 		components:{
 			progressCircle,
-			Scroll
+			Scroll,
+			playlist,
+			toast
 		}
 	}
 </script>
@@ -470,6 +481,7 @@
 	img{
 		pointer-events:none;
 	}
+	
 	.lysrictxt {
 	    margin-top: 2.5rem;
 	    font-size: 0.56rem;
@@ -486,7 +498,7 @@
 		right: 0%;
 		margin:auto;
 		height: 100%;
-		z-index: 20;
+		z-index: 700;
 		background: #222;
 	}
 	.middle {
@@ -569,7 +581,7 @@
 		font-size: 1.8rem;
     	margin-top: -.23rem;
 	}
-	.fullplay-top{display: flex;padding: 0 .5rem;margin-top: .4rem;}
+	.fullplay-top{display: flex;padding: 0 .5rem;margin-top: .4rem;height: 2.6rem;}
 	.icon-back {
 	    font-size: 0.95rem;
 	    color: rgb(255, 205, 50);
@@ -588,7 +600,19 @@
 	    white-space: nowrap;
 	}
 	.fullplay-top .text .name {
-	    font-size: .73rem;
+		font-size: 0.73rem;
+		width: 13rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-align:center;
+	}
+	.fullplay-top .text .desc{
+		width: 13rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-align:center;
 	}
 	h1,h2,p,div,ul,li{
 		margin:0;
@@ -629,12 +653,17 @@
 	    white-space: nowrap;
 	}
 	.miniPlay div:nth-child(2) .name{
-	    color: #fff;
+		color: #fff;
+		font-size: .58rem !important;
+		margin-top: .3rem;
+		width: 8rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
-	.miniPlay div:nth-child(2) .desc{
-	    color: #a3a3a3;
-	    font-size: .4rem;
-	    margin-top: .2rem;
+	.miniPlay div:nth-child(2) .desc {
+		color: #a3a3a3;
+		font-size: 0.5rem;
+		margin-top: 0.4rem;
 	}
 	.miniPlay div:nth-child(3) {
 	    font-size: 1.4rem;
@@ -642,9 +671,12 @@
 	    margin-right: 1.8rem;
 	    margin-left: -.8rem;
 	}
-	.miniPlay div:nth-child(4){
-	    font-size: 1.1rem;
-	    margin-top: 0.5rem;
+	.miniPlay div:nth-child(4) {
+		font-size: 1.1rem;
+		margin-top: 0.5rem;
+		position: relative;
+		z-index: 5;
+		padding: 0 .2rem;
 	}
 	.miniPlay div.bar{
 		font-size: 1.4rem;
@@ -750,4 +782,7 @@
 	 	    font-size: .7rem;
 	 	}
 	 }
+	 .icon-active{
+		color:#f34444 !important;
+	}
 </style>
