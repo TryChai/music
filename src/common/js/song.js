@@ -49,6 +49,7 @@ export async function getSong(o,singer){
 	if(date.status === 200 && date.data){
 		date = date.data
 	}
+	//在缓存种取出歌曲
 	let song = cache.getSong(name)
 	let idate = parseInt(cache.getTime(name+'-time')) || 0
 	if(song.length >0){
