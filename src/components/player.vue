@@ -83,7 +83,9 @@
 	import Scroll from 'base/scroll'
 	import playlist from 'components/playlist'
 	import {playmodeMixin,likeMixin} from 'common/js/mixin'
+	import axios from 'axios'
 	import toast from 'base/toast'
+	import {clearStorage} from 'common/js/cache'
 	export default {
 		mixins:[playmodeMixin,likeMixin],
 		data(){
@@ -191,7 +193,7 @@
 					}
 				}).catch(()=>{
 					this.currentLyric = null
-					this.lysrictxt = ''
+					this.lysrictxt = '找不到歌词'
 					this.currentLineNum = 0
 				})
 			},
@@ -320,7 +322,20 @@
 			},
 			error(){
 				this.songReady = true
-				this.next();
+				this.text = '该资源有问题 无法播放请选择其他音乐'
+				this.$refs.toast.show();
+				this.toggle();
+				clearStorage();
+				window.location.reload();
+				if(this.currentSong.songmid&&this.currentSong.singerMid){
+					let result = axios.get('/api/getSteram',{
+						params:{
+							songmid:this.currentSong.songmid,
+							singerMid:this.currentSong.singerMid
+						}
+					})
+					this.currentSong.url = result.data
+				}
 			},
 			updateTime(e){
 				this.currentTime = e.target.currentTime

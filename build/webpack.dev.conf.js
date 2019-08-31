@@ -29,6 +29,45 @@ const devWebpackConfig = merge(baseWebpackConfig, {
   // these devServer options should be customized in /config/index.js
   devServer: {
     before(app){
+
+      app.get('/api/date',(req,res)=>{
+        let date = new Date().getTime()
+        res.json(date)
+      })
+      app.get('/api/getSteram',(req,res)=>{
+        let {songmid,singerMid} = req.query
+        var url = `https://i.y.qq.com/v8/playsong.html?songmid=${songmid}`
+        axios.get(url,{
+          headers:{
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
+            "accept-encoding":"gzip, deflate, br",
+            "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "cache-control": "max-age=0",
+            "cookie": "pgv_pvid=7564767300; ts_uid=3377360137; ts_uid=3377360137; pgv_pvi=2139269120; RK=xKxQTpoNZ5; ptcz=2c0890f5668ebe1cbe60c5c27c0bbbbe62ba3d15ab3e974494de48105f1689e8; ts_refer=localhost/; tvfe_boss_uuid=dbbf8295ecdae651; o_cookie=173560554; pgv_info=ssid=s9175463820; pgv_si=s6281262080; userAction=1; yq_playschange=0; yq_playdata=; player_exist=1; qqmusic_fromtag=66; yqq_stat=0; yplayer_open=1; yq_index=0; ts_refer=ADTAGnewyqq.singer; ts_last=i.y.qq.com/v8/playsong.html",
+            "referer": `http://i.y.qq.com/n2/m/share/details/singer.html?ADTAG=newyqq.singer&source=ydetail&singerMid=${singerMid}`,
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "none",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1",
+            "user-agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1" ,
+          }
+        }).then(response=>{
+          let data = response.data
+          let frist = data.indexOf('<audio ') || ''
+          let last = data.indexOf('</audio') || ''
+          let str
+          (frist&&last)&& (str = data.substr(frist,last-frist))
+          let fristm = str.indexOf('src=') || ''
+          let lastm = str.indexOf('autoplay') || ''
+          var stream
+          (fristm&&lastm)&& (stream = str.substr(fristm+5,lastm-fristm-7))
+          if(stream){
+            res.json(stream)
+          }else{
+            res.json('null')
+          }
+        }).catch(e=>console.log(e))
+      })
       app.get('/api/getDiscList',(req,res)=>{
         var url = 'https://c.y.qq.com/splcloud/fcgi-bin/fcg_get_diss_by_tag.fcg'
         axios.get(url,{
@@ -38,8 +77,6 @@ const devWebpackConfig = merge(baseWebpackConfig, {
           },
           params:req.query
         }).then((response)=>{
-          // console.log(req.headers)
-          // console.log(response.data)
           res.json(response.data)
         }).catch((e)=>{
             console.log(e)
@@ -54,7 +91,6 @@ const devWebpackConfig = merge(baseWebpackConfig, {
           },
           params:req.query
         }).then(resp=>{
-          console.log(req.query)
           res.json(resp.data)
         }).catch(e=>{console.log(e)})
       })

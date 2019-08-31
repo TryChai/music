@@ -104,6 +104,14 @@ export default {
 
                     }
                 })
+                let loadtime = setTimeout(()=>{
+                    if(this.searchlist.length<=0){
+                        this.loading = false
+                        this.nomore = true
+                    }else{
+                        clearTimeout(loadtime)
+                    }
+                },8000)
             }
         },
         scrollToEnd(){
@@ -181,16 +189,16 @@ export default {
             // return ret
         },
          async getSong(list){
-             let rets = []
+             let rets = [],arr = []
             for(let item of list){
                 if(item.songmid&&item.songmid!='0' && item.albumid){
-                    await createSong(item).then(res=>{
-                        if(res){
-                            rets.push(res)
-                            }
-                        })
+                   arr.push(createSong(item))
                 }
             }
+            let res = await Promise.all(arr)
+             res.map(item=>{
+                if(item) rets.push(item) 
+            })
             return rets
         },
         ...mapMutations({

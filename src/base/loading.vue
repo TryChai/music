@@ -47,23 +47,22 @@ export default {
 <style scoped lang="stylus" rel="stylesheet/stylus">
   .loading{
     position: fixed;
-    top: 0%;
+    top: 7%;
     left: 0%;
     right: 0%;
     margin: auto;
     max-width: 640px;
     width: 100%;
     bottom: 0%;
-    height: 100%;
+    height: 69%;
     z-index: 90;
-    /*background: #333333;*/
+    /* background: #333333; */
   }
   .loading-box{
-    // background: rgba(0,0,0,0.6);
     width: 5rem;
     height: 5rem;
     margin: auto;
-    margin-top: 63%;
+    margin-top: 39%;
 }
  .loading .loading-box img {
     width: 23%;

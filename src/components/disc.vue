@@ -8,7 +8,7 @@
 import MusicList from 'components/music-list.vue'
 import {mapGetters} from 'vuex'
 import {getDiscSong} from 'api/recommend'
-import {createSong} from 'common/js/song'
+import {getSong} from 'common/js/song'
 export default{
 	data(){
 		return {
@@ -25,32 +25,15 @@ export default{
 	},
 	methods:{
 		_getDiscSong(){
+			let that = this
 			if(!this.disc.dissid){
 				this.$router.push('/recommend')
 				return
 			}
-			getDiscSong(this.disc.dissid).then(res=>{
-				let datalist = res.cdlist[0].songlist
-				let songlist = datalist.map(item=>{
-					return {songid:item.id,songmid:item.mid,singer:item.singer,songname:item.name,albumname:item.album.name,itterval:item.interval,albummid:item.album.id,albummid:item.album.mid}
-				})
-				this.songs = this._nomalizeSong(songlist)
+			getSong('d',this.disc).then(res=>{
+				that.songs = res
 			})
 		},
-		_nomalizeSong(list){
-			let ret = []
-			if(!list) retutn 
-			list.forEach(musicData =>{
-				if(musicData.songid && musicData.albummid){
-					createSong(musicData).then((res)=>{
-						if(res){
-							ret.push(res)
-						}
-					})
-				}
-			})
-			return ret
-		}
 	},
 	computed:{
 		title(){

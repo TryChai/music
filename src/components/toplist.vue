@@ -8,7 +8,7 @@
 import musicList from 'components/music-list.vue'
 import {mapGetters} from 'vuex'
 import {getMusicList} from 'api/rank'
-import {createSong} from 'common/js/song'
+import {getSong} from 'common/js/song'
 export default{
 	name:'toplist',
 	data(){
@@ -22,29 +22,15 @@ export default{
 	},
 	methods:{
 		_getMusicList(){
+			let that = this
 			if(!this.topList.id){
 				this.$router.push({path:'/rank'})
 				return 
 			}
-			getMusicList(this.topList.id).then(res=>{
-				this.songs = this._nomalizeMusicList(res.songlist)
+			getSong('r',this.topList).then(res=>{
+				that.songs = res
 			})
 		},
-		_nomalizeMusicList(list){
-			let ret = [];
-			list.forEach(item=>{
-				if(item.data.songmid && item.data.albumid){
-					createSong(item.data).then(res=>{
-						if(res){
-							ret.push(res)
-						}
-					})
-				}
-				
-			})
-			// console.log(ret)
-			return ret
-		}
 	},
 	computed:{
 		title(){

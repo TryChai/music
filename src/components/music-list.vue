@@ -131,7 +131,7 @@
 					if(newSong.length<=0){
 						this.noRseultShow = true
 					}
-				},1000)
+				},3500)
 				
 			}
 		},

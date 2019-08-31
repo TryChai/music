@@ -83,3 +83,21 @@ export function deleteLike(song){
 export function loadLike(){
     return storage.get(LIKE_KEY,[])
 }
+
+export function setSong(name,data){
+    storage.set(name,data)
+    return data
+}
+export function getSong(name){
+    return storage.get(name,[])
+}
+export function setTime(name,data){
+    storage.set(name,data)
+    return data
+}
+export function getTime(name){
+    return storage.get(name,'')
+}
+export function clearStorage(){
+    return storage.clear()
+}
